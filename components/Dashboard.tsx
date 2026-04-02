@@ -245,7 +245,7 @@ export default function Dashboard() {
             {/* Logo Container - Bez pozadí a rámečku */}
             <div className="h-10 md:h-12 flex items-center justify-center shrink-0">
               {/* Zkontroluj, že máš ve složce public/ soubor pojmenovaný logo.png s průhledným pozadím */}
-              <img src="/logo.png" alt="Company Logo" className="h-full w-auto object-contain drop-shadow-md" />
+              <img src="/images.png" alt="Company Logo" className="h-full w-auto object-contain drop-shadow-md" />
             </div>
 
             <div>
