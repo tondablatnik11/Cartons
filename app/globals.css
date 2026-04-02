@@ -4,40 +4,45 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-:root {
-  --bg: #06080f;
-  --sf: #0e1225;
-  --sf-hi: #141938;
-  --bd: rgba(99,145,255,0.08);
-  --ac: #6391ff;
-  --ac-g: rgba(99,145,255,0.15);
-  --ac-s: rgba(99,145,255,0.06);
-  --tx: #d4daf0;
-  --dm: #4b5580;
-  --gn: #00e5a0;
-  --am: #ffb020;
-  --rd: #ff4d6a;
-  --pu: #b18cff;
-}
-
-* { box-sizing: border-box; }
-
 body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--tx);
+  background-color: #040509; /* Temnější základ pro lepší kontrast skla */
+  color: #d4daf0;
   margin: 0;
+  overflow-x: hidden;
 }
 
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-thumb { background: var(--bd); border-radius: 2px; }
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Elegantní tmavý scrollbar */
+::-webkit-scrollbar { 
+  width: 6px; 
+  height: 6px; 
+}
+::-webkit-scrollbar-track { 
+  background: transparent; 
+}
+::-webkit-scrollbar-thumb { 
+  background: rgba(255, 255, 255, 0.1); 
+  border-radius: 10px; 
+}
+::-webkit-scrollbar-thumb:hover { 
+  background: rgba(255, 255, 255, 0.2); 
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+/* Animace pro ambientní záři na pozadí */
+@keyframes blob {
+  0% { transform: translate(0px, 0px) scale(1); }
+  33% { transform: translate(30px, -50px) scale(1.1); }
+  66% { transform: translate(-20px, 20px) scale(0.9); }
+  100% { transform: translate(0px, 0px) scale(1); }
+}
+
+.animate-blob {
+  animation: blob 10s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
