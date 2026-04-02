@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+:root {
+  --bg: #06080f;
+  --sf: #0e1225;
+  --sf-hi: #141938;
+  --bd: rgba(99,145,255,0.08);
+  --ac: #6391ff;
+  --ac-g: rgba(99,145,255,0.15);
+  --ac-s: rgba(99,145,255,0.06);
+  --tx: #d4daf0;
+  --dm: #4b5580;
+  --gn: #00e5a0;
+  --am: #ffb020;
+  --rd: #ff4d6a;
+  --pu: #b18cff;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  margin: 0;
+}
+
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-thumb { background: var(--bd); border-radius: 2px; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
