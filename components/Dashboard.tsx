@@ -25,21 +25,7 @@ const avgOf = (h: Record<string, number>) => {
 type Carton = { id: string; dim: string; pcs_per_pallet: number | null; article_num: string };
 type LogEntry = { id: number; carton_id: string; delta: number; note: string; created_at: string };
 
-const P = {
-  bg: "#06080f", sf: "#0e1225", sfHi: "#141938", bd: "rgba(99,145,255,0.08)",
-  ac: "#6391ff", acG: "rgba(99,145,255,0.15)", acS: "rgba(99,145,255,0.06)",
-  tx: "#d4daf0", dm: "#4b5580", gn: "#00e5a0", am: "#ffb020", rd: "#ff4d6a",
-  pu: "#b18cff", cy: "#22d3ee",
-};
-
-const tipS = { background: P.sf, border: `1px solid ${P.bd}`, borderRadius: 10, color: P.tx, fontSize: 11 };
-const thS: React.CSSProperties = { padding: "8px 10px", textAlign: "left", color: P.dm, fontWeight: 600, fontSize: 9, textTransform: "uppercase", letterSpacing: "0.06em", borderBottom: `2px solid ${P.bd}` };
-const tdS: React.CSSProperties = { padding: "10px", borderBottom: `1px solid ${P.bd}` };
-const cardS: React.CSSProperties = { background: P.sf, borderRadius: 14, border: `1px solid ${P.bd}`, padding: 22, marginBottom: 14 };
-const titleS: React.CSSProperties = { fontSize: 11, fontWeight: 800, color: P.ac, marginBottom: 16, letterSpacing: "0.08em", textTransform: "uppercase" };
-const btnS = (bg: string, fg = "#fff"): React.CSSProperties => ({ padding: "9px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: bg, color: fg });
-const inputS: React.CSSProperties = { padding: "7px 10px", borderRadius: 8, border: `1px solid ${P.bd}`, background: P.bg, color: P.tx, fontSize: 12, outline: "none", fontFamily: "inherit" };
-const chartColors = [P.ac, P.pu, P.am, P.gn, P.rd, "#ec4899", P.cy, "#f97316", "#6366f1", "#84cc16", "#e879f9", "#a3e635"];
+const chartColors = ["#6391ff", "#b18cff", "#ffb020", "#00e5a0", "#ff4d6a", "#ec4899", "#22d3ee", "#f97316", "#6366f1", "#84cc16", "#e879f9", "#a3e635"];
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -196,114 +182,147 @@ export default function Dashboard() {
   // ── Tab definitions ──
   const tabDefs = [
     { k: "overview", l: "Přehled", i: "◫" },
-    { k: "adjust", l: "Stav", i: "±" },
+    { k: "adjust", l: "Stav Skladu", i: "±" },
     { k: "prediction", l: "Predikce", i: "◇" },
     { k: "sap", l: "SAP Data", i: "↑" },
     { k: "alerts", l: `Alarmy${alerts.length ? ` (${alerts.length})` : ""}`, i: "△" },
-    { k: "log", l: "Log", i: "≡" },
+    { k: "log", l: "Historie", i: "≡" },
   ];
 
   if (loading) return (
-    <div style={{ background: P.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <div style={{ textAlign: "center", color: P.ac }}>
-        <div style={{ fontSize: 36, marginBottom: 12, animation: "pulse 1.5s infinite" }}>◎</div>
-        <div style={{ fontSize: 13, fontWeight: 600 }}>Načítám data ze Supabase...</div>
+    <div className="min-h-screen bg-bg flex items-center justify-center font-sans">
+      <div className="text-center text-accent">
+        <div className="text-4xl mb-4 animate-pulse">◎</div>
+        <div className="text-sm font-semibold tracking-wide">Načítám data ze Supabase...</div>
       </div>
     </div>
   );
 
   return (
-    <div style={{ minHeight: "100vh", background: P.bg }}>
+    <div className="min-h-screen bg-bg text-gray-200 font-sans selection:bg-accent/30 pb-20">
+      
+      {/* Toast Notification */}
       {toast && (
-        <div style={{
-          position: "fixed", top: 16, right: 16, padding: "12px 24px", borderRadius: 12, fontSize: 13,
-          fontWeight: 700, zIndex: 999, animation: "fadeIn .3s ease",
-          background: toast.type === "ok" ? P.gn : toast.type === "warn" ? P.am : P.ac, color: "#000",
-          boxShadow: `0 12px 48px rgba(0,0,0,.3)`,
-        }}>{toast.msg}</div>
+        <div className={`fixed top-6 right-6 px-5 py-3 rounded-xl text-sm font-bold shadow-2xl z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${
+          toast.type === "ok" ? "bg-success text-black" : toast.type === "warn" ? "bg-warning text-black" : "bg-accent text-black"
+        }`}>
+          {toast.msg}
+        </div>
       )}
 
+      {/* Progress Bar for Saving */}
       {saving && (
-        <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: 3, background: `linear-gradient(90deg, ${P.ac}, ${P.pu})`, zIndex: 1000, animation: "pulse 1s infinite" }} />
+        <div className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent to-purple z-50 animate-pulse" />
       )}
 
       {/* HEADER */}
-      <div style={{ background: `linear-gradient(180deg,${P.sfHi},${P.sf})`, borderBottom: `1px solid ${P.bd}`, padding: "20px 28px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, background: `linear-gradient(135deg,${P.ac},${P.pu})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 900, color: "#fff", boxShadow: `0 4px 20px rgba(99,145,255,.3)` }}>K</div>
+      <header className="bg-gradient-to-b from-surfaceHi to-surface border-b border-border px-8 py-6 sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-purple flex items-center justify-center text-xl font-black text-white shadow-lg shadow-accent/20">
+              K
+            </div>
             <div>
-              <div style={{ fontSize: 18, fontWeight: 900, color: "#fff", letterSpacing: "-0.03em" }}>Kartony Bor</div>
-              <div style={{ fontSize: 10, color: P.dm, marginTop: 2, fontWeight: 500 }}>WH 8496 · Supabase live</div>
+              <h1 className="text-2xl font-black text-white tracking-tight leading-none mb-1">Kartony Bor</h1>
+              <p className="text-xs text-dim font-medium tracking-wide uppercase">WH 8496 · Supabase live</p>
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            {alerts.length > 0 && <span style={{ padding: "5px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: "rgba(255,77,106,.1)", color: P.rd }}>△ {alerts.length}</span>}
-            <span style={{ padding: "5px 14px", borderRadius: 20, fontSize: 11, fontWeight: 700, background: P.acG, color: P.ac }}>Σ {totalStock} pal</span>
-            <button onClick={loadAll} style={{ ...btnS(P.acG, P.ac), padding: "5px 12px", fontSize: 11 }}>↻ Refresh</button>
+          <div className="flex items-center gap-3">
+            {alerts.length > 0 && (
+              <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-danger/10 text-danger border border-danger/20 flex items-center gap-2 shadow-inner">
+                <span className="w-2 h-2 rounded-full bg-danger animate-pulse"></span>
+                {alerts.length} Kritických
+              </span>
+            )}
+            <span className="px-4 py-1.5 rounded-full text-xs font-bold bg-accent/10 text-accent border border-accent/20">
+              Σ {totalStock} palet
+            </span>
+            <button onClick={loadAll} className="px-4 py-1.5 rounded-full text-xs font-bold bg-surfaceHi text-gray-300 hover:text-white border border-border hover:border-dim transition-all">
+              ↻ Refresh
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* TABS */}
-      <div style={{ display: "flex", gap: 2, padding: "6px 28px", background: P.sf, borderBottom: `1px solid ${P.bd}`, overflowX: "auto" }}>
-        {tabDefs.map((t) => (
-          <button key={t.k} onClick={() => setTab(t.k)} style={{
-            padding: "10px 16px", borderRadius: 8, fontSize: 12, fontWeight: tab === t.k ? 700 : 500,
-            background: tab === t.k ? P.acG : "transparent", color: tab === t.k ? P.ac : P.dm,
-            border: "none", cursor: "pointer", whiteSpace: "nowrap",
-          }}>{t.i} {t.l}</button>
-        ))}
-      </div>
+      <nav className="bg-surface border-b border-border sticky top-[97px] z-30 bg-opacity-95 backdrop-blur-sm">
+        <div className="max-w-7xl mx-auto flex gap-1 px-6 py-2 overflow-x-auto no-scrollbar">
+          {tabDefs.map((t) => (
+            <button key={t.k} onClick={() => setTab(t.k)} className={`
+              px-5 py-2.5 rounded-lg text-sm transition-all duration-200 whitespace-nowrap flex items-center gap-2
+              ${tab === t.k ? "bg-accent/15 text-accent font-bold" : "text-dim hover:text-gray-200 hover:bg-white/5 font-medium"}
+            `}>
+              <span className="opacity-70">{t.i}</span> {t.l}
+            </button>
+          ))}
+        </div>
+      </nav>
 
-      <div style={{ padding: "24px 28px", maxWidth: 1360 }}>
+      {/* MAIN CONTENT */}
+      <main className="max-w-7xl mx-auto px-6 py-8">
 
         {/* ═══ OVERVIEW ═══ */}
         {tab === "overview" && <>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(145px,1fr))", gap: 12, marginBottom: 16 }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
-              { l: "Celkem palet", v: totalStock, c: P.ac },
-              { l: "Typů kartonů", v: cartons.length, c: P.pu },
-              { l: "Kritických", v: enriched.filter((i) => i.ml <= CRIT && i.ml !== Infinity).length, c: P.rd },
-              { l: "SAP měsíců", v: coreMonths.length, c: P.gn },
+              { l: "Celkem palet", v: totalStock, c: "#6391ff" },
+              { l: "Typů kartonů", v: cartons.length, c: "#b18cff" },
+              { l: "Kritických", v: enriched.filter((i) => i.ml <= CRIT && i.ml !== Infinity).length, c: "#ff4d6a" },
+              { l: "SAP měsíců", v: coreMonths.length, c: "#00e5a0" },
             ].map((x, i) => (
-              <div key={i} style={{ ...cardS, textAlign: "center", padding: "20px 16px" }}>
-                <div style={{ fontSize: 30, fontWeight: 900, color: x.c, fontVariantNumeric: "tabular-nums" }}>{x.v}</div>
-                <div style={{ fontSize: 9, color: P.dm, marginTop: 4, textTransform: "uppercase", letterSpacing: "0.07em", fontWeight: 700 }}>{x.l}</div>
+              <div key={i} className="bg-surface border border-border rounded-2xl p-6 text-center hover:border-white/10 transition-colors shadow-sm">
+                <div className="text-3xl font-black mb-2 tabular-nums" style={{ color: x.c }}>{x.v}</div>
+                <div className="text-[10px] text-dim uppercase tracking-[0.1em] font-bold">{x.l}</div>
               </div>
             ))}
           </div>
 
-          <div style={cardS}>
-            <div style={titleS}>Zásoby podle kartonu</div>
-            <ResponsiveContainer width="100%" height={250}>
-              <BarChart data={enriched.map((d) => ({ name: d.id.replace("CARTON-", ""), stock: d.stock }))}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.bd} /><XAxis dataKey="name" tick={{ fill: P.dm, fontSize: 10 }} /><YAxis tick={{ fill: P.dm, fontSize: 10 }} />
-                <Tooltip contentStyle={tipS} />
-                <Bar dataKey="stock" name="Palety" radius={[6, 6, 0, 0]}>
+          <div className="bg-surface border border-border rounded-2xl p-6 mb-8 shadow-sm">
+            <h2 className="text-xs font-bold text-accent mb-6 tracking-widest uppercase">Zásoby podle kartonu</h2>
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={enriched.map((d) => ({ name: d.id.replace("CARTON-", ""), stock: d.stock }))} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,145,255,0.08)" vertical={false} />
+                <XAxis dataKey="name" tick={{ fill: "#4b5580", fontSize: 11 }} axisLine={false} tickLine={false} dy={10} />
+                <YAxis tick={{ fill: "#4b5580", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: "#0e1225", borderColor: "rgba(99,145,255,0.1)", borderRadius: "12px", color: "#d4daf0", fontSize: "12px", boxShadow: "0 10px 25px rgba(0,0,0,0.5)" }} />
+                <Bar dataKey="stock" name="Palety" radius={[4, 4, 0, 0]}>
                   {enriched.map((d, i) => <Cell key={i} fill={sColor(d.ml)} fillOpacity={0.9} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div style={cardS}>
-            <div style={titleS}>Detail</div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr>{["Karton", "Rozměr", "ks/pal", "Sklad", "Ø ks/m", "Ø pal/m", "Zásoby", "Stav"].map((h) => <th key={h} style={thS}>{h}</th>)}</tr></thead>
-                <tbody>{enriched.map((it) => (
-                  <tr key={it.id}>
-                    <td style={{ ...tdS, fontWeight: 700, color: P.ac }}>{it.id}</td>
-                    <td style={{ ...tdS, color: P.dm, fontSize: 11 }}>{it.dim}</td>
-                    <td style={tdS}>{it.pcs_per_pallet ?? "—"}</td>
-                    <td style={{ ...tdS, fontWeight: 800, fontSize: 15 }}>{it.stock}</td>
-                    <td style={tdS}>{it.avgPcs || "—"}</td>
-                    <td style={tdS}>{it.avgPal ? it.avgPal.toFixed(2) : "—"}</td>
-                    <td style={{ ...tdS, fontWeight: 700, color: sColor(it.ml) }}>{it.ml === Infinity ? "∞" : `${it.ml.toFixed(1)}m`}</td>
-                    <td style={tdS}><span style={{ padding: "3px 10px", borderRadius: 20, fontSize: 10, fontWeight: 700, background: `${sColor(it.ml)}15`, color: sColor(it.ml) }}>{sLabel(it.ml)}</span></td>
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-border bg-surfaceHi/30">
+              <h2 className="text-xs font-bold text-accent tracking-widest uppercase m-0">Detailní přehled</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-surfaceHi/50 text-dim text-xs uppercase tracking-wider">
+                  <tr>
+                    {["Karton", "Rozměr", "ks/pal", "Sklad", "Ø ks/m", "Ø pal/m", "Zásoby", "Stav"].map((h) => (
+                      <th key={h} className="px-6 py-4 font-semibold">{h}</th>
+                    ))}
                   </tr>
-                ))}</tbody>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {enriched.map((it) => (
+                    <tr key={it.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4 font-bold text-accent">{it.id}</td>
+                      <td className="px-6 py-4 text-dim text-xs">{it.dim}</td>
+                      <td className="px-6 py-4 text-gray-400">{it.pcs_per_pallet ?? "—"}</td>
+                      <td className="px-6 py-4 font-black text-base">{it.stock}</td>
+                      <td className="px-6 py-4 text-gray-400">{it.avgPcs || "—"}</td>
+                      <td className="px-6 py-4 text-gray-400">{it.avgPal ? it.avgPal.toFixed(2) : "—"}</td>
+                      <td className="px-6 py-4 font-bold" style={{ color: sColor(it.ml) }}>{it.ml === Infinity ? "∞" : `${it.ml.toFixed(1)}m`}</td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-full text-[10px] font-bold border" style={{ backgroundColor: `${sColor(it.ml)}15`, color: sColor(it.ml), borderColor: `${sColor(it.ml)}30` }}>
+                          {sLabel(it.ml)}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           </div>
@@ -311,96 +330,142 @@ export default function Dashboard() {
 
         {/* ═══ ADJUST ═══ */}
         {tab === "adjust" && <>
-          <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
-            <button onClick={() => { setBulkMode(!bulkMode); setBulkVals({}); }}
-              style={btnS(bulkMode ? `linear-gradient(135deg,${P.rd},#cc0033)` : `linear-gradient(135deg,${P.ac},${P.pu})`)}>
-              {bulkMode ? "✕ Zrušit" : "✏ Hromadná editace"}</button>
-            {bulkMode && <button onClick={doBulk} style={btnS(`linear-gradient(135deg,${P.gn},#00b880)`, "#000")}>✓ Uložit</button>}
+          <div className="flex flex-wrap gap-4 mb-6">
+            <button onClick={() => { setBulkMode(!bulkMode); setBulkVals({}); }} className={`
+              px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md
+              ${bulkMode ? "bg-gradient-to-br from-danger to-red-800 text-white" : "bg-gradient-to-br from-accent to-purple text-white hover:shadow-accent/25"}
+            `}>
+              {bulkMode ? "✕ Zrušit hromadnou editaci" : "✏ Hromadná inventura"}
+            </button>
+            
+            {bulkMode && (
+              <button onClick={doBulk} className="px-6 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-br from-success to-emerald-600 text-black shadow-md hover:shadow-success/25 transition-all">
+                ✓ Uložit stavy
+              </button>
+            )}
           </div>
 
           {bulkMode ? (
-            <div style={cardS}>
-              <div style={titleS}>Hromadné zadání</div>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr>{["Karton", "Aktuální", "Nový stav"].map((h) => <th key={h} style={thS}>{h}</th>)}</tr></thead>
-                <tbody>{cartons.map((c) => (
-                  <tr key={c.id}>
-                    <td style={{ ...tdS, fontWeight: 700, color: P.ac }}>{c.id}</td>
-                    <td style={{ ...tdS, color: P.dm }}>{stockMap[c.id] ?? 0}</td>
-                    <td style={tdS}><input type="number" min="0" placeholder={String(stockMap[c.id] ?? 0)} value={bulkVals[c.id] ?? ""} onChange={(e) => setBulkVals((p) => ({ ...p, [c.id]: e.target.value }))} style={{ ...inputS, width: 80 }} /></td>
-                  </tr>
-                ))}</tbody>
-              </table>
+            <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-300">
+               <div className="p-6 border-b border-border bg-surfaceHi/30">
+                <h2 className="text-xs font-bold text-accent tracking-widest uppercase m-0">Hromadné zadání (Fyzické sčítání)</h2>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-surfaceHi/50 text-dim text-xs uppercase tracking-wider">
+                    <tr><th className="px-6 py-4 font-semibold">Karton</th><th className="px-6 py-4 font-semibold">Aktuálně v systému</th><th className="px-6 py-4 font-semibold">Nový fyzický stav (palety)</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {cartons.map((c) => (
+                      <tr key={c.id} className="hover:bg-white/[0.02]">
+                        <td className="px-6 py-4 font-bold text-accent">{c.id}</td>
+                        <td className="px-6 py-4 text-dim font-medium">{stockMap[c.id] ?? 0}</td>
+                        <td className="px-6 py-3">
+                          <input type="number" min="0" placeholder={String(stockMap[c.id] ?? 0)} value={bulkVals[c.id] ?? ""} onChange={(e) => setBulkVals((p) => ({ ...p, [c.id]: e.target.value }))} 
+                            className="w-24 px-3 py-2 bg-bg border border-border rounded-lg text-white focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all" 
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
-            <div style={cardS}>
-              <div style={titleS}>Rychlá úprava</div>
-              <div style={{ display: "flex", gap: 10, marginBottom: 18, alignItems: "center", flexWrap: "wrap" }}>
-                <select value={selId || ""} onChange={(e) => setSelId(e.target.value || null)} style={{ ...inputS, padding: "9px 12px" }}>
-                  <option value="">— Karton —</option>
-                  {cartons.map((d) => <option key={d.id} value={d.id}>{d.id}</option>)}
+            <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
+              <h2 className="text-xs font-bold text-accent mb-6 tracking-widest uppercase">Rychlá úprava stavu</h2>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-8 bg-bg p-2 rounded-xl border border-border inline-flex">
+                <select value={selId || ""} onChange={(e) => setSelId(e.target.value || null)} className="bg-transparent text-white px-4 py-2 outline-none cursor-pointer font-medium appearance-none min-w-[150px]">
+                  <option value="" className="bg-surface">— Vyber Karton —</option>
+                  {cartons.map((d) => <option key={d.id} value={d.id} className="bg-surface">{d.id}</option>)}
                 </select>
-                <input type="number" min="1" value={adjQ} onChange={(e) => setAdjQ(Math.max(1, Number(e.target.value)))} style={{ ...inputS, width: 56, padding: "9px 10px" }} />
-                <button disabled={!selId} onClick={() => selId && doAdjust(selId, -adjQ)} style={{ ...btnS(`linear-gradient(135deg,${P.rd},#cc0033)`), opacity: selId ? 1 : .4 }}>− Odebrat</button>
-                <button disabled={!selId} onClick={() => selId && doAdjust(selId, adjQ)} style={{ ...btnS(`linear-gradient(135deg,${P.gn},#00b880)`, "#000"), opacity: selId ? 1 : .4 }}>+ Přidat</button>
+                <div className="w-[1px] h-6 bg-border mx-1"></div>
+                <input type="number" min="1" value={adjQ} onChange={(e) => setAdjQ(Math.max(1, Number(e.target.value)))} className="w-16 bg-transparent text-white px-2 py-2 outline-none text-center font-bold" />
+                <div className="w-[1px] h-6 bg-border mx-1"></div>
+                <button disabled={!selId} onClick={() => selId && doAdjust(selId, -adjQ)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${selId ? 'bg-danger/10 text-danger hover:bg-danger/20' : 'opacity-30 cursor-not-allowed text-dim'}`}>− Odebrat</button>
+                <button disabled={!selId} onClick={() => selId && doAdjust(selId, adjQ)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${selId ? 'bg-success/10 text-success hover:bg-success/20' : 'opacity-30 cursor-not-allowed text-dim'}`}>+ Přidat</button>
               </div>
 
-              {selId && (() => { const it = enriched.find((d) => d.id === selId); if (!it) return null; return (
-                <div style={{ padding: 14, background: P.acS, borderRadius: 10, border: `1px solid ${P.bd}`, marginBottom: 18, display: "flex", gap: 20, flexWrap: "wrap", fontSize: 12 }}>
-                  <div><span style={{ color: P.dm }}>Karton:</span> <strong style={{ color: P.ac }}>{it.id}</strong></div>
-                  <div><span style={{ color: P.dm }}>Sklad:</span> <strong>{it.stock} pal</strong></div>
-                  <div><span style={{ color: P.dm }}>Ø:</span> <strong>{it.avgPal.toFixed(2)} pal/m</strong></div>
-                  <div><span style={{ color: P.dm }}>Na:</span> <strong style={{ color: sColor(it.ml) }}>{it.ml === Infinity ? "∞" : `${it.ml.toFixed(1)}m`}</strong></div>
-                </div>
+              {selId && (() => { 
+                const it = enriched.find((d) => d.id === selId); 
+                if (!it) return null; 
+                return (
+                  <div className="mb-8 p-5 bg-accent/5 border border-accent/20 rounded-xl flex flex-wrap gap-x-8 gap-y-4 text-sm animate-in fade-in zoom-in-95 duration-200">
+                    <div><span className="text-dim block text-xs mb-1 uppercase tracking-wider">Vybraný karton</span> <strong className="text-accent text-base">{it.id}</strong></div>
+                    <div><span className="text-dim block text-xs mb-1 uppercase tracking-wider">Aktuální sklad</span> <strong className="text-white text-base">{it.stock} palet</strong></div>
+                    <div><span className="text-dim block text-xs mb-1 uppercase tracking-wider">Průměrný výdej</span> <strong className="text-white text-base">{it.avgPal.toFixed(2)} pal/m</strong></div>
+                    <div><span className="text-dim block text-xs mb-1 uppercase tracking-wider">Zásoba vydrží na</span> <strong className="text-base" style={{ color: sColor(it.ml) }}>{it.ml === Infinity ? "∞" : `${it.ml.toFixed(1)} měsíců`}</strong></div>
+                  </div>
               ); })()}
 
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr>{["Karton", "Sklad", "Akce"].map((h) => <th key={h} style={thS}>{h}</th>)}</tr></thead>
-                <tbody>{enriched.map((it) => (
-                  <tr key={it.id}>
-                    <td style={{ ...tdS, fontWeight: 700, color: P.ac }}>{it.id}</td>
-                    <td style={{ ...tdS, fontWeight: 800, fontSize: 15 }}>{it.stock}</td>
-                    <td style={tdS}>
-                      <div style={{ display: "flex", gap: 4 }}>
-                        {[-5, -1, 1, 5].map((d) => (
-                          <button key={d} onClick={() => doAdjust(it.id, d)} style={{
-                            padding: "5px 10px", borderRadius: 6, fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer",
-                            background: d < 0 ? "rgba(255,77,106,.08)" : "rgba(0,229,160,.08)", color: d < 0 ? P.rd : P.gn,
-                          }}>{d > 0 ? "+" : ""}{d}</button>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}</tbody>
-              </table>
+              <div className="overflow-x-auto border border-border rounded-xl">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-surfaceHi/50 text-dim text-xs uppercase tracking-wider">
+                    <tr><th className="px-6 py-4 font-semibold">Karton</th><th className="px-6 py-4 font-semibold">Sklad</th><th className="px-6 py-4 font-semibold">Rychlá akce</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {enriched.map((it) => (
+                      <tr key={it.id} className="hover:bg-white/[0.02]">
+                        <td className="px-6 py-4 font-bold text-accent">{it.id}</td>
+                        <td className="px-6 py-4 font-black text-base">{it.stock}</td>
+                        <td className="px-6 py-3">
+                          <div className="flex gap-2">
+                            {[-5, -1, 1, 5].map((d) => (
+                              <button key={d} onClick={() => doAdjust(it.id, d)} className={`
+                                w-10 h-8 flex items-center justify-center rounded-md text-xs font-bold transition-colors
+                                ${d < 0 ? "bg-danger/10 text-danger hover:bg-danger/20" : "bg-success/10 text-success hover:bg-success/20"}
+                              `}>
+                                {d > 0 ? "+" : ""}{d}
+                              </button>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </>}
 
         {/* ═══ PREDICTION ═══ */}
         {tab === "prediction" && <>
-          <div style={cardS}>
-            <div style={titleS}>Predikce vyčerpání</div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr>{["Karton", "Sklad", "Ø pal/m", "Zásoby", "Vyčerpání", "Objednat (3m)"].map((h) => <th key={h} style={thS}>{h}</th>)}</tr></thead>
-                <tbody>{enriched.filter((i) => i.avgPal > 0).sort((a, b) => a.ml - b.ml).map((it) => (
-                  <tr key={it.id}>
-                    <td style={{ ...tdS, fontWeight: 700, color: P.ac }}>{it.id}</td>
-                    <td style={{ ...tdS, fontWeight: 700 }}>{it.stock}</td>
-                    <td style={tdS}>{it.avgPal.toFixed(2)}</td>
-                    <td style={{ ...tdS, fontWeight: 700, color: sColor(it.ml) }}>{it.ml === Infinity ? "∞" : `${it.ml.toFixed(1)}m`}</td>
-                    <td style={{ ...tdS, color: it.ml <= LOW ? P.rd : P.dm }}>{it.ml < 24 ? fDate(it.dep) : "24+m"}</td>
-                    <td style={{ ...tdS, fontWeight: 700, color: it.reorder > 0 ? P.am : P.gn }}>{it.reorder > 0 ? `${it.reorder} pal` : "—"}</td>
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm mb-8">
+            <div className="p-6 border-b border-border bg-surfaceHi/30">
+              <h2 className="text-xs font-bold text-accent tracking-widest uppercase m-0">Kdy dojdou zásoby?</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-surfaceHi/50 text-dim text-xs uppercase tracking-wider">
+                  <tr>
+                    {["Karton", "Sklad", "Ø pal/m", "Zásoby", "Datum vyčerpání", "Doporučení k objednání (pro 3m)"].map((h) => (
+                      <th key={h} className="px-6 py-4 font-semibold">{h}</th>
+                    ))}
                   </tr>
-                ))}</tbody>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {enriched.filter((i) => i.avgPal > 0).sort((a, b) => a.ml - b.ml).map((it) => (
+                    <tr key={it.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-6 py-4 font-bold text-accent">{it.id}</td>
+                      <td className="px-6 py-4 font-black">{it.stock}</td>
+                      <td className="px-6 py-4 text-gray-400">{it.avgPal.toFixed(2)}</td>
+                      <td className="px-6 py-4 font-bold" style={{ color: sColor(it.ml) }}>{it.ml === Infinity ? "∞" : `${it.ml.toFixed(1)}m`}</td>
+                      <td className={`px-6 py-4 font-medium ${it.ml <= LOW ? 'text-danger' : 'text-gray-300'}`}>{it.ml < 24 ? fDate(it.dep) : "24+ měsíců"}</td>
+                      <td className="px-6 py-4 font-bold">
+                        {it.reorder > 0 ? <span className="text-warning bg-warning/10 px-3 py-1 rounded-full border border-warning/20">Objednat {it.reorder} palet</span> : <span className="text-success">—</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
               </table>
             </div>
           </div>
 
-          <div style={cardS}>
-            <div style={titleS}>Prognóza 6 měsíců</div>
-            <ResponsiveContainer width="100%" height={300}>
+          <div className="bg-surface border border-border rounded-2xl p-6 shadow-sm">
+            <h2 className="text-xs font-bold text-accent mb-6 tracking-widest uppercase">Trend poklesu zásob (Příštích 6 měsíců)</h2>
+            <ResponsiveContainer width="100%" height={350}>
               <AreaChart data={(() => {
                 const pts: any[] = [];
                 for (let m = 0; m <= 6; m++) {
@@ -410,9 +475,12 @@ export default function Dashboard() {
                   pts.push(e);
                 }
                 return pts;
-              })()}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.bd} /><XAxis dataKey="month" tick={{ fill: P.dm, fontSize: 10 }} /><YAxis tick={{ fill: P.dm, fontSize: 10 }} />
-                <Tooltip contentStyle={tipS} /><Legend wrapperStyle={{ fontSize: 10 }} />
+              })()} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,145,255,0.08)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: "#4b5580", fontSize: 11 }} axisLine={false} tickLine={false} dy={10} />
+                <YAxis tick={{ fill: "#4b5580", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip contentStyle={{ backgroundColor: "#0e1225", borderColor: "rgba(99,145,255,0.1)", borderRadius: "12px", color: "#d4daf0", fontSize: "12px" }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: "20px" }} />
                 {enriched.filter((i) => i.avgPal > 0).map((it, idx) => (
                   <Area key={it.id} type="monotone" dataKey={it.id} stroke={chartColors[idx % chartColors.length]} fill={chartColors[idx % chartColors.length]} fillOpacity={0.05} strokeWidth={2} name={it.id} />
                 ))}
@@ -423,49 +491,70 @@ export default function Dashboard() {
 
         {/* ═══ SAP ═══ */}
         {tab === "sap" && <>
-          <div style={cardS}>
-            <div style={titleS}>Nahrát SAP export</div>
-            <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-              <label style={{ ...btnS(`linear-gradient(135deg,${P.ac},${P.pu})`), display: "inline-block", cursor: "pointer" }}>
-                📁 Vybrat LIPS.xlsx
-                <input ref={fRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} style={{ display: "none" }} />
+          <div className="bg-surface border border-border rounded-2xl p-6 mb-8 shadow-sm">
+             <h2 className="text-xs font-bold text-accent mb-6 tracking-widest uppercase">Nahrát měsíční report ze SAPu</h2>
+            <div className="flex flex-wrap items-center gap-4">
+              <label className="px-6 py-3 rounded-xl text-sm font-bold bg-gradient-to-br from-accent to-purple text-white shadow-md hover:shadow-accent/25 cursor-pointer transition-all inline-flex items-center gap-2">
+                <svg className="w-5 h-5 opacity-80" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                Vybrat LIPS.xlsx
+                <input ref={fRef} type="file" accept=".xlsx,.xls" onChange={handleUpload} className="hidden" />
               </label>
-              {uploadMsg && <span style={{ fontSize: 12, fontWeight: 600, color: uploadMsg.startsWith("✓") ? P.gn : uploadMsg.startsWith("⚠") || uploadMsg.startsWith("✕") ? P.rd : P.ac }}>{uploadMsg}</span>}
+              {uploadMsg && (
+                <span className={`text-sm font-semibold px-4 py-2 rounded-lg bg-bg border border-border ${uploadMsg.startsWith("✓") ? "text-success" : uploadMsg.startsWith("⚠") || uploadMsg.startsWith("✕") ? "text-danger" : "text-accent"}`}>
+                  {uploadMsg}
+                </span>
+              )}
             </div>
-            <div style={{ marginTop: 12, fontSize: 11, color: P.dm, lineHeight: 1.8 }}>
-              Nahraj měsíční LIPS export. Zpracují se sloupce <strong style={{ color: P.tx }}>Material</strong>, <strong style={{ color: P.tx }}>Delivery quantity</strong>, <strong style={{ color: P.tx }}>Material Avail. Date</strong>. Data se uloží do Supabase.
-            </div>
+            <p className="mt-4 text-xs text-dim leading-relaxed max-w-2xl">
+              Nahraj LIPS export z libovolného měsíce. Aplikace automaticky sečte hodnoty ze sloupce <strong className="text-gray-300">Delivery quantity</strong> pro příslušný <strong className="text-gray-300">Material</strong> a přiřadí je ke správnému měsíci podle <strong className="text-gray-300">Material Avail. Date</strong>. Data se bezpečně synchronizují do centrální Supabase databáze.
+            </p>
           </div>
 
-          <div style={cardS}>
-            <div style={titleS}>Měsíční spotřeba (ks)</div>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={coreMonths.map((m) => { const e: any = { month: m }; Object.keys(sapHistory).sort().forEach((mat) => { e[mat] = sapHistory[mat][m] || 0; }); return e; })}>
-                <CartesianGrid strokeDasharray="3 3" stroke={P.bd} /><XAxis dataKey="month" tick={{ fill: P.dm, fontSize: 10 }} /><YAxis tick={{ fill: P.dm, fontSize: 10 }} />
-                <Tooltip contentStyle={tipS} /><Legend wrapperStyle={{ fontSize: 9 }} />
+          <div className="bg-surface border border-border rounded-2xl p-6 mb-8 shadow-sm">
+             <h2 className="text-xs font-bold text-accent mb-6 tracking-widest uppercase">Historie spotřeby (Kusy)</h2>
+            <ResponsiveContainer width="100%" height={320}>
+              <BarChart data={coreMonths.map((m) => { const e: any = { month: m }; Object.keys(sapHistory).sort().forEach((mat) => { e[mat] = sapHistory[mat][m] || 0; }); return e; })} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(99,145,255,0.08)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: "#4b5580", fontSize: 11 }} axisLine={false} tickLine={false} dy={10} />
+                <YAxis tick={{ fill: "#4b5580", fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.02)' }} contentStyle={{ backgroundColor: "#0e1225", borderColor: "rgba(99,145,255,0.1)", borderRadius: "12px", color: "#d4daf0", fontSize: "12px" }} />
+                <Legend wrapperStyle={{ fontSize: 12, paddingTop: "20px" }} />
                 {Object.keys(sapHistory).sort().map((mat, idx) => (
-                  <Bar key={mat} dataKey={mat} fill={chartColors[idx % chartColors.length]} radius={[3, 3, 0, 0]} />
+                  <Bar key={mat} dataKey={mat} fill={chartColors[idx % chartColors.length]} radius={[4, 4, 0, 0]} />
                 ))}
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          <div style={cardS}>
-            <div style={titleS}>Detailní průměry</div>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-                <thead><tr>
-                  {["Karton", "Ø ks/m", "ks/pal", "Ø pal/m", ...coreMonths].map((h) => <th key={h} style={{ ...thS, fontSize: 8, whiteSpace: "nowrap" }}>{h}</th>)}
-                </tr></thead>
-                <tbody>{enriched.filter((i) => sapHistory[i.id]).map((it) => { const h = sapHistory[it.id] || {}; return (
-                  <tr key={it.id}>
-                    <td style={{ ...tdS, fontWeight: 700, color: P.ac, fontSize: 11 }}>{it.id}</td>
-                    <td style={{ ...tdS, fontWeight: 600 }}>{it.avgPcs}</td>
-                    <td style={tdS}>{it.pcs_per_pallet ?? "—"}</td>
-                    <td style={{ ...tdS, fontWeight: 600 }}>{it.avgPal ? it.avgPal.toFixed(2) : "—"}</td>
-                    {coreMonths.map((m) => <td key={m} style={{ ...tdS, color: h[m] ? P.tx : P.dm, fontVariantNumeric: "tabular-nums" }}>{h[m] || "—"}</td>)}
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+             <div className="p-6 border-b border-border bg-surfaceHi/30">
+              <h2 className="text-xs font-bold text-accent tracking-widest uppercase m-0">Detailní matice dat ze SAPu</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm whitespace-nowrap">
+                <thead className="bg-surfaceHi/50 text-dim text-[10px] uppercase tracking-wider">
+                  <tr>
+                    {["Karton", "Ø ks/m", "ks/pal", "Ø pal/m", ...coreMonths].map((h) => (
+                      <th key={h} className="px-6 py-4 font-semibold">{h}</th>
+                    ))}
                   </tr>
-                ); })}</tbody>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {enriched.filter((i) => sapHistory[i.id]).map((it) => {
+                    const h = sapHistory[it.id] || {};
+                    return (
+                      <tr key={it.id} className="hover:bg-white/[0.02]">
+                        <td className="px-6 py-3 font-bold text-accent">{it.id}</td>
+                        <td className="px-6 py-3 text-gray-300 font-medium">{it.avgPcs}</td>
+                        <td className="px-6 py-3 text-dim">{it.pcs_per_pallet ?? "—"}</td>
+                        <td className="px-6 py-3 text-gray-300 font-medium">{it.avgPal ? it.avgPal.toFixed(2) : "—"}</td>
+                        {coreMonths.map((m) => (
+                          <td key={m} className={`px-6 py-3 tabular-nums ${h[m] ? 'text-gray-300' : 'text-dim'}`}>{h[m] || "—"}</td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
               </table>
             </div>
           </div>
@@ -473,58 +562,83 @@ export default function Dashboard() {
 
         {/* ═══ ALERTS ═══ */}
         {tab === "alerts" && <>
-          <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
-            <span style={{ color: P.dm, fontSize: 12, fontWeight: 600 }}>Práh:</span>
-            <input type="range" min="0.5" max="4" step="0.25" value={thresh} onChange={(e) => setThresh(Number(e.target.value))} style={{ flex: 1, maxWidth: 200, accentColor: P.ac }} />
-            <span style={{ color: P.ac, fontWeight: 800, fontSize: 14 }}>{thresh} měs.</span>
+          <div className="flex items-center gap-4 mb-8 bg-surface p-6 rounded-2xl border border-border">
+            <span className="text-dim text-sm font-semibold uppercase tracking-wider">Nastavení prahu kritičnosti:</span>
+            <input type="range" min="0.5" max="4" step="0.25" value={thresh} onChange={(e) => setThresh(Number(e.target.value))} className="flex-1 max-w-[250px] accent-accent" />
+            <span className="text-accent font-black text-lg w-20">{thresh} měs.</span>
           </div>
-          {alerts.length === 0 ? (
-            <div style={{ ...cardS, textAlign: "center", padding: 50 }}>
-              <div style={{ fontSize: 36, marginBottom: 8, color: P.gn }}>✓</div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: P.gn }}>Vše v pořádku</div>
-              <div style={{ color: P.dm, marginTop: 6, fontSize: 12 }}>Žádné pod prahem {thresh} měs.</div>
-            </div>
-          ) : alerts.map((it) => (
-            <div key={it.id} style={{ ...cardS, borderLeft: `4px solid ${sColor(it.ml)}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
-                <div><div style={{ fontWeight: 800, fontSize: 15 }}>{it.id}</div><div style={{ color: P.dm, fontSize: 11 }}>{it.dim}</div></div>
-                <span style={{ padding: "4px 12px", borderRadius: 20, fontSize: 10, fontWeight: 700, background: `${sColor(it.ml)}15`, color: sColor(it.ml) }}>{sLabel(it.ml)}</span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {alerts.length === 0 ? (
+              <div className="col-span-full bg-surface border border-border rounded-2xl p-16 text-center">
+                <div className="text-6xl mb-4 text-success opacity-80">✓</div>
+                <div className="text-xl font-black text-success mb-2">Vše v naprostém pořádku</div>
+                <div className="text-dim text-sm">Žádný materiál neklesl pod nastavený práh {thresh} měsíců.</div>
               </div>
-              <div style={{ display: "flex", gap: 20, marginTop: 12, flexWrap: "wrap", fontSize: 12 }}>
-                <div><span style={{ color: P.dm }}>Sklad:</span> <strong>{it.stock}</strong> pal</div>
-                <div><span style={{ color: P.dm }}>Na:</span> <strong style={{ color: sColor(it.ml) }}>{it.ml.toFixed(1)}m</strong></div>
-                <div><span style={{ color: P.dm }}>Objednat:</span> <strong style={{ color: P.am }}>{it.reorder} pal</strong></div>
+            ) : alerts.map((it) => (
+              <div key={it.id} className="bg-surface rounded-2xl p-6 shadow-sm relative overflow-hidden" style={{ borderLeft: `6px solid ${sColor(it.ml)}` }}>
+                <div className="absolute top-0 right-0 p-6 opacity-10">
+                  <svg className="w-20 h-20" style={{ color: sColor(it.ml) }} fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" /></svg>
+                </div>
+                
+                <div className="flex justify-between items-start mb-6 relative z-10">
+                  <div>
+                    <h3 className="text-lg font-black text-white">{it.id}</h3>
+                    <p className="text-xs text-dim mt-1">{it.dim}</p>
+                  </div>
+                  <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border" style={{ backgroundColor: `${sColor(it.ml)}15`, color: sColor(it.ml), borderColor: `${sColor(it.ml)}30` }}>
+                    {sLabel(it.ml)}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-y-4 gap-x-2 text-sm relative z-10">
+                  <div><span className="text-dim text-xs block mb-1">Aktuálně na skladu</span> <strong className="text-white text-base">{it.stock} palet</strong></div>
+                  <div><span className="text-dim text-xs block mb-1">Zásoba vydrží na</span> <strong className="text-base" style={{ color: sColor(it.ml) }}>{it.ml.toFixed(1)} měsíců</strong></div>
+                  <div className="col-span-2 pt-2 mt-2 border-t border-border">
+                    <span className="text-dim text-xs block mb-1">Doporučeno ihned objednat</span> 
+                    <strong className="text-warning text-lg">{it.reorder} palet</strong>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </>}
 
         {/* ═══ LOG ═══ */}
         {tab === "log" && <>
-          <div style={cardS}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div style={titleS}>Log změn ({logEntries.length})</div>
-              <button onClick={loadAll} style={{ ...btnS(P.acG, P.ac), padding: "6px 14px", fontSize: 11 }}>↻ Refresh</button>
+          <div className="bg-surface border border-border rounded-2xl overflow-hidden shadow-sm">
+            <div className="p-6 border-b border-border bg-surfaceHi/30 flex justify-between items-center">
+              <h2 className="text-xs font-bold text-accent tracking-widest uppercase m-0">Historie pohybů (Posledních {logEntries.length})</h2>
+              <button onClick={loadAll} className="px-4 py-1.5 rounded-lg text-xs font-bold bg-bg text-dim hover:text-white border border-border transition-all">↻ Aktualizovat</button>
             </div>
+            
             {logEntries.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 40, color: P.dm, fontSize: 12 }}>Zatím žádné změny</div>
+              <div className="text-center p-16 text-dim text-sm">Zatím nebyly zaznamenány žádné změny stavů.</div>
             ) : (
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-                <thead><tr>{["Datum", "Karton", "Změna", "Poznámka"].map((h) => <th key={h} style={thS}>{h}</th>)}</tr></thead>
-                <tbody>{logEntries.map((e) => (
-                  <tr key={e.id}>
-                    <td style={{ ...tdS, color: P.dm, fontSize: 11 }}>{new Date(e.created_at).toLocaleString("cs-CZ")}</td>
-                    <td style={{ ...tdS, fontWeight: 700, color: P.ac }}>{e.carton_id}</td>
-                    <td style={{ ...tdS, fontWeight: 700, color: e.delta > 0 ? P.gn : P.rd }}>{e.delta > 0 ? "+" : ""}{e.delta} pal</td>
-                    <td style={{ ...tdS, color: P.dm }}>{e.note}</td>
-                  </tr>
-                ))}</tbody>
-              </table>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-surfaceHi/50 text-dim text-xs uppercase tracking-wider">
+                    <tr><th className="px-6 py-4 font-semibold">Datum a čas</th><th className="px-6 py-4 font-semibold">Karton</th><th className="px-6 py-4 font-semibold">Pohyb</th><th className="px-6 py-4 font-semibold">Poznámka</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {logEntries.map((e) => (
+                      <tr key={e.id} className="hover:bg-white/[0.02] transition-colors">
+                        <td className="px-6 py-4 text-dim text-xs">{new Date(e.created_at).toLocaleString("cs-CZ")}</td>
+                        <td className="px-6 py-4 font-bold text-accent">{e.carton_id}</td>
+                        <td className={`px-6 py-4 font-bold ${e.delta > 0 ? 'text-success' : 'text-danger'}`}>
+                          {e.delta > 0 ? "+" : ""}{e.delta} palet
+                        </td>
+                        <td className="px-6 py-4 text-gray-400 italic text-xs">{e.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         </>}
 
-      </div>
+      </main>
     </div>
   );
 }
