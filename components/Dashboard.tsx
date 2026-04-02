@@ -237,26 +237,21 @@ export default function Dashboard() {
         <div className="fixed top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-accent via-purple to-accent z-50 animate-pulse bg-[length:200%_200%]" />
       )}
 
-      {/* ── HEADER (Glass + Logo) ── */}
+      {/* ── HEADER (Glass + Clean Logo) ── */}
       <header className="relative z-40 bg-[#040509]/60 backdrop-blur-3xl border-b border-white/[0.08] px-8 py-6 sticky top-0 shadow-[0_4px_30px_rgba(0,0,0,0.15)]">
         <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-6 group">
-            
-            {/* Logo Container */}
-            <div className="h-16 w-32 flex items-center justify-center bg-white/5 rounded-2xl p-2 border border-white/10 backdrop-blur-md shadow-lg group-hover:bg-white/10 transition-all duration-300 overflow-hidden">
-              {/* Očekáváme soubor images.png ve složce public/ */}
-              <img src="/images.png" alt="Company Logo" className="max-h-full max-w-full object-contain drop-shadow-md" />
+          
+          <div className="flex items-center gap-5">
+            {/* Logo Container - Bez pozadí a rámečku */}
+            <div className="h-10 md:h-12 flex items-center justify-center shrink-0">
+              {/* Zkontroluj, že máš ve složce public/ soubor pojmenovaný logo.png s průhledným pozadím */}
+              <img src="/logo.png" alt="Company Logo" className="h-full w-auto object-contain drop-shadow-md" />
             </div>
 
             <div>
-              <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight leading-none mb-2 drop-shadow-sm">
+              <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 tracking-tight leading-none drop-shadow-sm">
                 Kartony Bor
               </h1>
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-accent font-black tracking-widest uppercase">WH 8496</span>
-                <span className="w-1.5 h-1.5 rounded-full bg-dim"></span>
-                <span className="text-sm text-dim font-bold tracking-widest uppercase">SAP WM Control Tower</span>
-              </div>
             </div>
           </div>
           
@@ -281,7 +276,7 @@ export default function Dashboard() {
       </header>
 
       {/* ── TABS (Enhanced Glass & Size) ── */}
-      <nav className="relative z-30 bg-[#0a0d18]/70 backdrop-blur-2xl border-b border-white/[0.08] sticky top-[113px] shadow-sm">
+      <nav className="relative z-30 bg-[#0a0d18]/70 backdrop-blur-2xl border-b border-white/[0.08] sticky top-[97px] shadow-sm">
         <div className="max-w-[1400px] mx-auto flex gap-3 px-6 py-4 overflow-x-auto no-scrollbar">
           {tabDefs.map((t) => (
             <button key={t.k} onClick={() => setTab(t.k)} className={`
