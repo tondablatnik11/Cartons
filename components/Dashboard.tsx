@@ -159,14 +159,44 @@ export default function Dashboard() {
       const wb = XLSX.read(ab, { cellDates: true });
       const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
       // Vytvoříme seznam platných kartonů, které už v DB existují
-      const validIds = new Set(cartons.map(c => c.id));
+      const agg: Record<string, Record<string, number>> = {};
+      cr.forEach((r: any) => {
+        const mat = r.Material;
+        const dv = r["Material Avail. Date"] || r["Created On"];
+        if (!dv) return;
+        
+        let d: Date | null = null;
+        if (dv instanceof Date) {
+          d = dv;
+        } else if (typeof dv === "string") {
+          // Očištění od mezer a času (vše za první mezerou zahodíme)
+          const dateStr = dv.trim().split(" ")[0].replace(/[./]/g, "-"); 
+          
+          // Detekce českého/EU formátu DD-MM-YYYY
+          const euMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+          if (euMatch) {
+            d = new Date(Number(euMatch[3]), Number(euMatch[2]) - 1, Number(euMatch[1]));
+          } else {
+            d = new Date(dateStr); // Fallback pro YYYY-MM-DD
+          }
+        } else if (typeof dv === "number") {
+          // Fallback pro Excel datumové sériové číslo (počet dní od roku 1900)
+          d = new Date(Math.round((dv - 25569) * 86400 * 1000));
+        }
 
-      // Vyfiltrujeme pouze záznamy CARTON-, které DB reálně zná
-      const cr = rows.filter((r: any) => {
-      const mat = String(r.Material || "");
-      return mat.startsWith("CARTON-") && validIds.has(mat);
-  });
-      if (!cr.length) { setUploadMsg("⚠ Žádné CARTON záznamy"); setTimeout(() => setUploadMsg(null), 4000); return; }
+        // Pokud datum nejde přečíst, přeskočíme řádek
+        if (!d || isNaN(d.getTime())) return;
+        
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        
+        // Zásadní pojistka proti zápisu NaN-NaN do Supabase
+        if (isNaN(year) || isNaN(month)) return; 
+        
+        const k = `${year}-${String(month).padStart(2, "0")}`;
+        if (!agg[mat]) agg[mat] = {};
+        agg[mat][k] = (agg[mat][k] || 0) + (Number(r["Delivery quantity"]) || 0);
+      });
 
       const agg: Record<string, Record<string, number>> = {};
       cr.forEach((r: any) => {
