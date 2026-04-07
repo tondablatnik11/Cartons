@@ -67,30 +67,43 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
-  // ── Enriched data ──
-  const enriched = useMemo(() => cartons.map((c) => {
-    const stock = stockMap[c.id] ?? 0;
-    const avgPcs = Math.round(avgOf(sapHistory[c.id] || {}));
-    const avgPal = c.pcs_per_pallet ? avgPcs / c.pcs_per_pallet : 0;
-    const ml = avgPal > 0 ? stock / avgPal : Infinity;
-    const dep = new Date(); dep.setDate(dep.getDate() + ml * 30.4);
-    const reorder = Math.max(0, Math.ceil(avgPal * 3 - stock));
-    const fc = [];
-    for (let m = 0; m <= 6; m++) {
-      const d = new Date(); d.setMonth(d.getMonth() + m);
-      fc.push({ label: `${d.getMonth() + 1}/${d.getFullYear()}`, stock: Math.max(0, Math.round((stock - avgPal * m) * 10) / 10) });
-    }
-    return { ...c, stock, avgPcs, avgPal: Math.round(avgPal * 100) / 100, ml, dep, reorder, fc };
-  }), [cartons, stockMap, sapHistory]);
-
-  const alerts = useMemo(() => enriched.filter((i) => i.ml <= thresh && i.ml !== Infinity).sort((a, b) => a.ml - b.ml), [enriched, thresh]);
-  const totalStock = useMemo(() => enriched.reduce((s, i) => s + i.stock, 0), [enriched]);
+ // ── Enriched data a Měsíce ──
+  
+  // 1. Nejdřív zjistíme všechny dostupné měsíce ze Supabase
   const allMonths = useMemo(() => {
     const s = new Set<string>();
     Object.values(sapHistory).forEach((h) => Object.keys(h).forEach((k) => s.add(k)));
     return [...s].sort();
   }, [sapHistory]);
-  const coreMonths = useMemo(() => allMonths.filter((m) => { const [y, mo] = m.split("-").map(Number); return y === 2025 && mo >= 7 && mo <= 11; }), [allMonths]);
+
+  // 2. Vybereme posledních 6 měsíců (dynamicky). Změň na -12, pokud chceš vidět celý rok.
+  const coreMonths = useMemo(() => allMonths.slice(-6), [allMonths]);
+
+  // 3. Spočítáme stavy a predikce POUZE na základě těchto nejnovějších měsíců
+  const enriched = useMemo(() => cartons.map((c) => {
+    const stock = stockMap[c.id] ?? 0;
+    const history = sapHistory[c.id] || {};
+    
+    // Průměr počítáme jen ze zobrazených měsíců (coreMonths), kde byla spotřeba > 0
+    const recentVals = coreMonths.map((m) => history[m] || 0).filter((v) => v > 0);
+    const avgPcs = recentVals.length ? Math.round(recentVals.reduce((a, b) => a + b, 0) / recentVals.length) : 0;
+    
+    const avgPal = c.pcs_per_pallet ? avgPcs / c.pcs_per_pallet : 0;
+    const ml = avgPal > 0 ? stock / avgPal : Infinity;
+    const dep = new Date(); dep.setDate(dep.getDate() + ml * 30.4);
+    const reorder = Math.max(0, Math.ceil(avgPal * 3 - stock));
+    const fc = [];
+    
+    for (let m = 0; m <= 6; m++) {
+      const d = new Date(); d.setMonth(d.getMonth() + m);
+      fc.push({ label: `${d.getMonth() + 1}/${d.getFullYear()}`, stock: Math.max(0, Math.round((stock - avgPal * m) * 10) / 10) });
+    }
+    
+    return { ...c, stock, avgPcs, avgPal: Math.round(avgPal * 100) / 100, ml, dep, reorder, fc };
+  }), [cartons, stockMap, sapHistory, coreMonths]);
+
+  const alerts = useMemo(() => enriched.filter((i) => i.ml <= thresh && i.ml !== Infinity).sort((a, b) => a.ml - b.ml), [enriched, thresh]);
+  const totalStock = useMemo(() => enriched.reduce((s, i) => s + i.stock, 0), [enriched]);
 
   // ── Stock adjustment ──
   async function doAdjust(id: string, delta: number) {
