@@ -173,8 +173,20 @@ export default function Dashboard() {
         const mat = r.Material;
         const dv = r["Material Avail. Date"] || r["Created On"];
         if (!dv) return;
-        const d = new Date(dv);
+        
+        let d: Date;
+        // Podmínka pro zachycení formátu DD-MM-YYYY nebo DD.MM.YYYY
+        if (typeof dv === "string" && /^\d{2}[-.]\d{2}[-.]\d{4}$/.test(dv)) {
+          const parts = dv.split(/[-.]/);
+          // new Date(rok, měsíc (indexováno od 0), den)
+          d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+        } else {
+          // Fallback pro YYYY-MM-DD nebo nativní objekt Date z Excelu
+          d = new Date(dv);
+        }
+
         if (isNaN(d.getTime())) return;
+        
         const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
         if (!agg[mat]) agg[mat] = {};
         agg[mat][k] = (agg[mat][k] || 0) + (Number(r["Delivery quantity"]) || 0);
