@@ -17,10 +17,6 @@ const CRIT = 0.75;
 const sColor = (m: number) => (m <= CRIT ? "#ff4d6a" : m <= LOW ? "#ffb020" : "#00e5a0");
 const sLabel = (m: number) => (m <= CRIT ? "KRITICKÝ" : m <= LOW ? "NÍZKÝ" : "OK");
 const fDate = (d: Date) => `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
-const avgOf = (h: Record<string, number>) => {
-  const v = Object.values(h);
-  return v.length ? v.reduce((a, b) => a + b, 0) / v.length : 0;
-};
 
 type Carton = { id: string; dim: string; pcs_per_pallet: number | null; article_num: string };
 type LogEntry = { id: number; carton_id: string; delta: number; note: string; created_at: string };
@@ -67,7 +63,7 @@ export default function Dashboard() {
     setTimeout(() => setToast(null), 3000);
   }, []);
 
- // ── Enriched data a Měsíce ──
+  // ── Enriched data a Měsíce ──
   
   // 1. Nejdřív zjistíme všechny dostupné měsíce ze Supabase
   const allMonths = useMemo(() => {
@@ -76,7 +72,7 @@ export default function Dashboard() {
     return [...s].sort();
   }, [sapHistory]);
 
-  // 2. Vybereme posledních 6 měsíců (dynamicky). Změň na -12, pokud chceš vidět celý rok.
+  // 2. Vybereme posledních 6 měsíců (dynamicky). 
   const coreMonths = useMemo(() => allMonths.slice(-6), [allMonths]);
 
   // 3. Spočítáme stavy a predikce POUZE na základě těchto nejnovějších měsíců
@@ -158,7 +154,19 @@ export default function Dashboard() {
       const ab = await file.arrayBuffer();
       const wb = XLSX.read(ab, { cellDates: true });
       const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
+      
       // Vytvoříme seznam platných kartonů, které už v DB existují
+      const validIds = new Set(cartons.map(c => c.id));
+
+      // Vyfiltrujeme pouze záznamy CARTON-, které DB reálně zná (a odstraníme mezery)
+      const cr = rows.filter((r: any) => {
+        const mat = String(r.Material || "").trim();
+        r.Material = mat; 
+        return mat.startsWith("CARTON-") && validIds.has(mat);
+      });
+
+      if (!cr.length) { setUploadMsg("⚠ Žádné známé CARTON záznamy"); setTimeout(() => setUploadMsg(null), 4000); return; }
+
       const agg: Record<string, Record<string, number>> = {};
       cr.forEach((r: any) => {
         const mat = r.Material;
@@ -169,7 +177,7 @@ export default function Dashboard() {
         if (dv instanceof Date) {
           d = dv;
         } else if (typeof dv === "string") {
-          // Očištění od mezer a času (vše za první mezerou zahodíme)
+          // Očištění od mezer a času
           const dateStr = dv.trim().split(" ")[0].replace(/[./]/g, "-"); 
           
           // Detekce českého/EU formátu DD-MM-YYYY
@@ -198,39 +206,15 @@ export default function Dashboard() {
         agg[mat][k] = (agg[mat][k] || 0) + (Number(r["Delivery quantity"]) || 0);
       });
 
-      const agg: Record<string, Record<string, number>> = {};
-      cr.forEach((r: any) => {
-        const mat = r.Material;
-        const dv = r["Material Avail. Date"] || r["Created On"];
-        if (!dv) return;
-        
-        let d: Date;
-        // Podmínka pro zachycení formátu DD-MM-YYYY nebo DD.MM.YYYY
-        if (typeof dv === "string" && /^\d{2}[-.]\d{2}[-.]\d{4}$/.test(dv)) {
-          const parts = dv.split(/[-.]/);
-          // new Date(rok, měsíc (indexováno od 0), den)
-          d = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
-        } else {
-          // Fallback pro YYYY-MM-DD nebo nativní objekt Date z Excelu
-          d = new Date(dv);
-        }
-
-        if (isNaN(d.getTime())) return;
-        
-        const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-        if (!agg[mat]) agg[mat] = {};
-        agg[mat][k] = (agg[mat][k] || 0) + (Number(r["Delivery quantity"]) || 0);
-      });
-
       const upsertRows: { carton_id: string; month: string; quantity: number }[] = [];
       for (const [mat, months] of Object.entries(agg)) {
         for (const [month, qty] of Object.entries(months)) {
-          // Získáme stávající hodnotu z databáze pro daný karton a měsíc
+          // Získáme stávající hodnotu z databáze pro daný karton a měsíc a PŘIČTEME novou
           const existingQty = sapHistory[mat]?.[month] || 0;
-          // K existující hodnotě PŘIČTEME nová data ze souboru (kumulace)
           upsertRows.push({ carton_id: mat, month, quantity: existingQty + qty });
         }
       }
+      
       await upsertSapData(upsertRows);
       await loadAll();
       const mc = Object.keys(agg).length;
@@ -309,8 +293,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-5">
             {/* Logo Container - Bez pozadí a rámečku */}
             <div className="h-10 md:h-12 flex items-center justify-center shrink-0">
-              {/* Zkontroluj, že máš ve složce public/ soubor pojmenovaný logo.png s průhledným pozadím */}
-              <img src="/images.png" alt="Company Logo" className="h-full w-auto object-contain drop-shadow-md" />
+              <img src="/image_45bc26.png" alt="Continental Logo" className="h-full w-auto object-contain drop-shadow-md" />
             </div>
 
             <div>
