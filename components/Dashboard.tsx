@@ -7,6 +7,7 @@ import {
 } from "recharts";
 import * as XLSX from "xlsx";
 import {
+  supabase, // <--- TOTO JSME PŘIDALI
   fetchCartons, fetchStock, fetchSapConsumption, fetchChangeLog,
   updateStock, addChangeLog, upsertSapData, bulkUpdateStock,
 } from "@/lib/supabase";
@@ -155,18 +156,42 @@ export default function Dashboard() {
       const wb = XLSX.read(ab, { cellDates: true });
       const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
       
-      // Vytvoříme seznam platných kartonů, které už v DB existují
-      const validIds = new Set(cartons.map(c => c.id));
-
-      // Vyfiltrujeme pouze záznamy CARTON-, které DB reálně zná (a odstraníme mezery)
+      // 1. Získáme VŠECHNY záznamy CARTON- ze SAP exportu
+      const allSapCartons = new Set<string>();
       const cr = rows.filter((r: any) => {
-        const mat = String(r.Material || "").trim();
-        r.Material = mat; 
-        return mat.startsWith("CARTON-") && validIds.has(mat);
+        const mat = String(r.Material || "").trim().toUpperCase();
+        if (mat.startsWith("CARTON-")) {
+          r.Material = mat; 
+          allSapCartons.add(mat);
+          return true; // Ponecháme všechny kartony
+        }
+        return false;
       });
 
-      if (!cr.length) { setUploadMsg("⚠ Žádné známé CARTON záznamy"); setTimeout(() => setUploadMsg(null), 4000); return; }
+      if (!cr.length) { setUploadMsg("⚠ Žádné CARTON záznamy"); setTimeout(() => setUploadMsg(null), 4000); return; }
 
+      // 2. AUTOMATICKÉ ZALOŽENÍ CHYBĚJÍCÍCH KARTONŮ V DATABÁZI
+      const validIds = new Set(cartons.map(c => c.id));
+      const missingCartons = [...allSapCartons].filter(id => !validIds.has(id));
+
+      if (missingCartons.length > 0) {
+        setUploadMsg(`Zakládám ${missingCartons.length} nových kartonů...`);
+        const newCartonsData = missingCartons.map(id => ({
+          id: id,
+          dim: "Založeno z importu", // Výchozí text pro nové kartony
+        }));
+        
+        // Pošleme nové kartony do databáze
+        const { error: insertError } = await supabase.from('cartons').insert(newCartonsData);
+        if (insertError) throw new Error("Nelze založit kartony: " + insertError.message);
+        
+        // Přidáme je i do aktuálně platných pro import
+        missingCartons.forEach(id => validIds.add(id));
+      }
+
+      setUploadMsg("Počítám spotřebu...");
+
+      // 3. Agregace dat (Měsíce a Množství)
       const agg: Record<string, Record<string, number>> = {};
       cr.forEach((r: any) => {
         const mat = r.Material;
@@ -177,39 +202,36 @@ export default function Dashboard() {
         if (dv instanceof Date) {
           d = dv;
         } else if (typeof dv === "string") {
-          // Očištění od mezer a času
           const dateStr = dv.trim().split(" ")[0].replace(/[./]/g, "-"); 
-          
-          // Detekce českého/EU formátu DD-MM-YYYY
           const euMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
           if (euMatch) {
             d = new Date(Number(euMatch[3]), Number(euMatch[2]) - 1, Number(euMatch[1]));
           } else {
-            d = new Date(dateStr); // Fallback pro YYYY-MM-DD
+            d = new Date(dateStr);
           }
         } else if (typeof dv === "number") {
-          // Fallback pro Excel datumové sériové číslo (počet dní od roku 1900)
           d = new Date(Math.round((dv - 25569) * 86400 * 1000));
         }
 
-        // Pokud datum nejde přečíst, přeskočíme řádek
         if (!d || isNaN(d.getTime())) return;
         
         const year = d.getFullYear();
         const month = d.getMonth() + 1;
-        
-        // Zásadní pojistka proti zápisu NaN-NaN do Supabase
         if (isNaN(year) || isNaN(month)) return; 
         
         const k = `${year}-${String(month).padStart(2, "0")}`;
+        
+        const rawQty = String(r["Delivery quantity"] || "0").replace(/\s/g, '').replace(',', '.');
+        const parsedQty = Number(rawQty) || 0;
+
         if (!agg[mat]) agg[mat] = {};
-        agg[mat][k] = (agg[mat][k] || 0) + (Number(r["Delivery quantity"]) || 0);
+        agg[mat][k] = (agg[mat][k] || 0) + parsedQty;
       });
 
+      // 4. Kumulativní uložení spotřeby
       const upsertRows: { carton_id: string; month: string; quantity: number }[] = [];
       for (const [mat, months] of Object.entries(agg)) {
         for (const [month, qty] of Object.entries(months)) {
-          // Získáme stávající hodnotu z databáze pro daný karton a měsíc a PŘIČTEME novou
           const existingQty = sapHistory[mat]?.[month] || 0;
           upsertRows.push({ carton_id: mat, month, quantity: existingQty + qty });
         }
@@ -217,9 +239,9 @@ export default function Dashboard() {
       
       await upsertSapData(upsertRows);
       await loadAll();
-      const mc = Object.keys(agg).length;
-      setUploadMsg(`✓ ${cr.length} řádků · ${mc} kartonů`);
-      notify("SAP data aktualizována", "ok");
+      
+      setUploadMsg(`✓ Nataženo ${cr.length} řádků`);
+      notify("SAP data úspěšně nahrána", "ok");
       setTimeout(() => setUploadMsg(null), 5000);
     } catch (err: any) {
       setUploadMsg(`✕ ${err.message}`);
