@@ -73,16 +73,21 @@ export default function Dashboard() {
     return [...s].sort();
   }, [sapHistory]);
 
-  // 2. Vybereme posledních 6 měsíců (dynamicky). 
-  const coreMonths = useMemo(() => allMonths.slice(-6), [allMonths]);
+  // 2. Vyfiltrujeme měsíce s významnou spotřebou (celkový součet > 50 ks)
+  const coreMonths = useMemo(() => {
+    return allMonths.filter((m) => {
+      const total = Object.values(sapHistory).reduce((sum, h) => sum + (h[m] || 0), 0);
+      return total > 50; // Odfiltruje okrajové měsíce s minimální spotřebou
+    });
+  }, [allMonths, sapHistory]);
 
   // 3. Spočítáme stavy a predikce POUZE na základě těchto nejnovějších měsíců
   const enriched = useMemo(() => cartons.map((c) => {
     const stock = stockMap[c.id] ?? 0;
     const history = sapHistory[c.id] || {};
     
-    // Průměr počítáme jen ze zobrazených měsíců (coreMonths), kde byla spotřeba > 0
-    const recentVals = coreMonths.map((m) => history[m] || 0).filter((v) => v > 0);
+    // Průměr počítáme ze VŠECH coreMonths (i nulových — to znamená že v tom měsíci nebyla spotřeba)
+    const recentVals = coreMonths.map((m) => history[m] || 0);
     const avgPcs = recentVals.length ? Math.round(recentVals.reduce((a, b) => a + b, 0) / recentVals.length) : 0;
     
     const avgPal = c.pcs_per_pallet ? avgPcs / c.pcs_per_pallet : 0;
@@ -228,19 +233,23 @@ export default function Dashboard() {
         agg[mat][k] = (agg[mat][k] || 0) + parsedQty;
       });
 
-      // 4. Kumulativní uložení spotřeby
+      // 4. Uložení spotřeby (NAHRAZENÍ, ne kumulace — při re-uploadu se data přepíší)
       const upsertRows: { carton_id: string; month: string; quantity: number }[] = [];
       for (const [mat, months] of Object.entries(agg)) {
         for (const [month, qty] of Object.entries(months)) {
-          const existingQty = sapHistory[mat]?.[month] || 0;
-          upsertRows.push({ carton_id: mat, month, quantity: existingQty + qty });
+          upsertRows.push({ carton_id: mat, month, quantity: qty });
         }
       }
       
-      await upsertSapData(upsertRows);
+      // Supabase má limit na upsert — posíláme po dávkách 500 řádků
+      setUploadMsg(`Ukládám ${upsertRows.length} záznamů...`);
+      const BATCH = 500;
+      for (let i = 0; i < upsertRows.length; i += BATCH) {
+        await upsertSapData(upsertRows.slice(i, i + BATCH));
+      }
       await loadAll();
       
-      setUploadMsg(`✓ Nataženo ${cr.length} řádků`);
+      setUploadMsg(`✓ Zpracováno ${cr.length} řádků → ${upsertRows.length} měsíčních záznamů (${Object.keys(agg).length} kartonů)`);
       notify("SAP data úspěšně nahrána", "ok");
       setTimeout(() => setUploadMsg(null), 5000);
     } catch (err: any) {
