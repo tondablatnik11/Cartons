@@ -145,7 +145,14 @@ export default function Dashboard() {
       const ab = await file.arrayBuffer();
       const wb = XLSX.read(ab, { cellDates: true });
       const rows = XLSX.utils.sheet_to_json<any>(wb.Sheets[wb.SheetNames[0]]);
-      const cr = rows.filter((r: any) => String(r.Material || "").startsWith("CARTON-"));
+      // Vytvoříme seznam platných kartonů, které už v DB existují
+      const validIds = new Set(cartons.map(c => c.id));
+
+      // Vyfiltrujeme pouze záznamy CARTON-, které DB reálně zná
+      const cr = rows.filter((r: any) => {
+      const mat = String(r.Material || "");
+      return mat.startsWith("CARTON-") && validIds.has(mat);
+  });
       if (!cr.length) { setUploadMsg("⚠ Žádné CARTON záznamy"); setTimeout(() => setUploadMsg(null), 4000); return; }
 
       const agg: Record<string, Record<string, number>> = {};
