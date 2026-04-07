@@ -195,7 +195,10 @@ export default function Dashboard() {
       const upsertRows: { carton_id: string; month: string; quantity: number }[] = [];
       for (const [mat, months] of Object.entries(agg)) {
         for (const [month, qty] of Object.entries(months)) {
-          upsertRows.push({ carton_id: mat, month, quantity: qty });
+          // Získáme stávající hodnotu z databáze pro daný karton a měsíc
+          const existingQty = sapHistory[mat]?.[month] || 0;
+          // K existující hodnotě PŘIČTEME nová data ze souboru (kumulace)
+          upsertRows.push({ carton_id: mat, month, quantity: existingQty + qty });
         }
       }
       await upsertSapData(upsertRows);
